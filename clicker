@@ -1,0 +1,488 @@
+#!/bin/bash
+THIS_DIR=$(cd $(dirname $0); pwd)
+cd $THIS_DIR
+red() {
+  printf '\e[1;31m%s\n\e[0;39;49m' "$@"
+}
+green() {
+  printf '\e[1;32m%s\n\e[0;39;49m' "$@"
+}
+white() {
+  printf '\e[1;37m%s\n\e[0;39;49m' "$@"
+}
+prtred() {
+	printf '\e[1;31m%s\n\e[0;39;49m' "$@"
+}
+prtgrn() {
+	printf '\e[1;32m%s\n\e[0;39;49m' "$@"
+}
+prtbrown() {
+	printf '\e[1;33m%s\n\e[0;39;49m' "$@"
+}
+login(){
+red "Enter Your Bot Profile ID:"
+green "ایدی کلیکر خود را وارد کنید:"
+read Profile
+./bot $Profile
+white "دیتای کلیکر ساخته شد.برای اجرا کردن آن"
+green "./clicker $Profile"
+white "جهت اجرا به شکل اتولانچ هم از "
+green "./clicker auto"
+white "استفاده کنید"
+exit
+}
+
+create() {
+  name=clicker
+  if [[ -e bot ]] ; then
+      i=1
+      while [[ -e $name-$i.sh ]] ; do
+          let i++
+      done
+      name=$name-$i
+  fi
+red "Your Profile ID: $i"
+green "ایدی پروفایل کلیکر شما: $i"
+red "Enter SUDO ID
+ex. : 218722292"
+green "ایدی عددی سودو را وارد کنید
+مثال : 218722292"
+read sudoid
+redis-cli sadd "$i"owner $sudoid
+redis-cli del Phone
+redis-cli del APIID
+redis-cli del APIHASH
+python3 apihash.py
+ ./bot $i
+echo "" > clicker-$i.sh
+exec 4<> clicker-$i.sh
+    echo "while true;do" >&4
+    echo "./bot $i" >&4
+	echo "" >&4
+    echo "done" >&4
+	
+exec 4>&-
+chmod 777 clicker-$i.sh
+
+white "کلیکر شما ساخته شد.برای اجرا کردن آن"
+green "./clicker $i"
+white "جهت اجرا به شکل اتولانچ هم از "
+green "./clicker auto"
+white "استفاده کنید"
+exit
+}
+usage() {
+printf "\e[1;36m"
+  cat <<EOF
+راهنمای استفاده از راه انداز کلیکر
+:گزینه ها
+./clicker clearsql
+پاکسازی دیتابیس کلیکر ها
+./clicker install
+نصب پیش نیاز های کلیکر
+./clicker login
+ورود به یک کلیکر از قبل ساخته شده
+./clicker help
+نمایش این متن
+./clicker clear
+پاک سازی یک کلیکر
+./clicker create
+ساخت یک کلیکر
+./clicker clearall
+پاک سازی دیتای کل کلیکر ها
+./clicker addsudo
+افزودن یک سودو
+./clicker remsudo
+حذف یک سودو
+./clicker auto
+راه اندازی اتولانچ
+./clicker sudoall
+اضافه کردن یک سودو برای تمام پروفایل ها
+./clicker delsudoall
+حذف یک سودو برای تمام پروفایل ها
+./clicker resource
+نشان دادن مقدار مصرف منابع سرور
+EOF
+printf "%s\n\e[0;39;49m"
+}
+contactus(){
+ red "Our Contact way:"
+green "Channel: @the_CA"
+green "Developer: @ByeCoder - @CaltMan"
+green "Robot: @CodingArtBot"
+ red "راه های ارتباط باما:"
+green "کانال: @the_CA"
+green "توسعه دهنده: @ByeCoder - @CaltMan"
+green "ربات: @CodingArtBot"
+  exit
+}
+resource(){
+memTotal_b=`free -b |grep Mem |awk '{print $2}'`
+memFree_b=`free -b |grep Mem |awk '{print $4}'`
+memBuffer_b=`free -b |grep Mem |awk '{print $6}'`
+memCache_b=`free -b |grep Mem |awk '{print $7}'`
+memTotal_m=`free -m |grep Mem |awk '{print $2 - $4}'`
+memFree_m=`free -m |grep Mem |awk '{print $4}'`
+memBuffer_m=`free -m |grep Mem |awk '{print $6}'`
+memCache_m=`free -m |grep Mem |awk '{print $7}'`
+CPUPer=`top -b -n1 | grep "Cpu(s)" | awk '{print $2 + $4}'`
+hdd=`df -lh | awk '{if ($6 == "/") { print $5 }}' | head -1 | cut -d'%' -f1`
+uptime=`uptime`
+time=`date` 
+calendar=`cal` 
+ProcessCnt=`ps -A | wc -l`
+memUsed_b=$(($memTotal_b-$memFree_b))
+memUsed_m=$(($memTotal_m-$memFree_m))
+memUsedPrc=$((($memUsed_b*100)/$memTotal_b))
+ red "Total RAM: "$memTotal_m" MB"
+green "RAM Usage: "$memUsed_m" MB["$memUsedPrc"%]"
+white "CPU Usage: "$CPUPer"%"
+ red "HDD Usage: "$hdd"%"
+green "Total Process: "$ProcessCnt""
+  exit
+}
+addsudo(){
+ red "Enter clicker ID:"
+ green "ایدی کلیکر موردنظر را واردکنید:"
+read TabID
+ red "Enter SUDO ID:"
+ green "ایدی سودوی مورد نظر را وارد کنید:"
+read SudoID
+redis-cli sadd "$TabID"owner $SudoID
+ green "ایدی مورد نظر به سودو ارتقا یافت"
+  exit
+}
+remsudo(){
+ red "Enter clicker ID:"
+ green "ایدی کلیکر موردنظر را واردکنید:"
+read TabID
+ red "Enter SUDO ID:"
+ green "ایدی سودوی مورد نظر را وارد کنید:"
+read SudoID
+redis-cli srem "$TabID"owner $SudoID
+ green "ایدی مورد نظر از سودویی برکنار شد"
+  exit
+}
+clear() {
+ green '
+      شماره پروفایل رباتی که میخواهید پاک شود را وارد کنید؟
+'
+prtgrn '
+   Enter Profile number of Robot that you want to delete?
+ '
+  read -rp ' ' ID
+  green '
+      *//آیا میخواهید فایل کانفیگ هم حذف شود(شامل API_ID و API_HASH)?(Y/N)
+'
+prtgrn '
+   *//Do you want to clear Config file too(include API_ID and API_HASH)? (Y/N):
+ '
+	read -rp ' ' clears
+	case "$clears" in
+    Y|y|بله)
+	
+ rm -rf ~/clicker/data/clicker-"$ID"
+  rm -rf clicker-"$ID".lua
+ rm -rf clicker-"$ID".sh
+   rm -rf "$ID"memory.lua
+   rm -rf ."$ID"memory.lua
+
+  red '
+     کلیکر شماره '$ID' به طور کامل با موفقیت حذف شد
+'
+ ;;
+    N|n|خیر)
+
+   cfg=~/clicker/data/clicker-$ID/configdata.cfg
+  if [[ -e ${cfg} ]]; then
+mv ~/clicker/data/clicker-$ID/configdata.cfg ~/clicker/data/configdata.cfg
+fi
+ rm -rf ~/clicker/data/clicker-"$ID"
+ rm -rf clicker-"$ID".sh
+   rm -rf "$ID"memory.lua
+   rm -rf ."$ID"memory.lua
+   mkdir -p ~/clicker/data/clicker-"$ID"
+mv ~/clicker/data/configdata.lua ~/.telegram-bot/clicker-$ID/bot.cfg 
+  red '
+     کلیکر شماره '$ID' بدون فایل کانفیگ با موفقیت حذف شد
+'
+    ;;
+    *)
+		prtred '
+    دستور اشتباه
+  Wrong command
+ '
+		clear
+    ;;
+esac
+}
+clearall() {
+  green '
+       ایدی سودو را وارد کنید
+'
+ read sudoid
+   rm -rf data
+   redis-cli flushall
+   for abc in clicker-*.sh ; do
+      tab="${abc%.*}"
+      i="${tab/clicker-/}"
+rm -rf "$i"memory.lua
+     rm -rf ."$i"memory.lua
+	  rm -rf clicker-"$i".sh
+	  redis-cli sadd "$i"owner $sudoid
+	  done
+  red '
+     تمامی دیتا ها پاک شدند و شما میتوانید از نو اقدام به ساختن ربات کنید
+'
+  exit
+}
+sudoall() {
+  green '
+       ایدی سودو را وارد کنید
+'
+ read sudoid
+    for abc in clicker-*.sh ; do
+      tab="${abc%.*}"
+      i="${tab/clicker-/}"
+redis-cli sadd "$i"owner $sudoid
+	  done
+  red '
+  ایدی مورد نظر در تمامی پروفایل ها سودو شد
+'
+  exit
+}
+delsudoall() {
+  green '
+       ایدی سودو را وارد کنید
+'
+ read sudoid
+    for abc in clicker-*.sh ; do
+      tab="${abc%.*}"
+      i="${tab/clicker-/}"
+redis-cli srem "$i"owner $sudoid
+	  done
+  red '
+  ایدی مورد نظر از تمامی پروفایل ها حذف شد
+'
+  exit
+}
+clearsql() {
+ for abc in clicker-*.sh ; do
+      tab="${abc%.*}"
+      i="${tab/clicker-/}"
+rm -rf ~/clicker/data/clicker-"$i"/db.sqlite
+rm -rf ~/clicker/data/clicker-"$i"/db.sqlite-shm
+rm -rf ~/clicker/data/clicker-"$i"/db.sqlite-wal
+rm -rf ~/clicker/data/clicker-"$i"/tdlua.json
+	  done
+~/clicker/clicker auto
+}
+autolaunch() {
+  while true ; do
+	 for tabchi in tabchi-*.sh ; do
+      tab="${tabchi%.*}"
+	  i="${tab/tabchi-/}"
+	  if [[ $i -eq 1 ]] ; then
+screen -S tabchiz -X quit
+screen -d -m -S tabchiz ./tabchi-1.sh 
+elif [[ $i -eq 10 ]] ; then
+screen -S tabchiba -X quit
+screen -d -m -S tabchiba ./tabchi-10.sh 
+else
+screen -S $tab -X quit
+screen -d -m -S $tab ./tabchi-$i.sh 
+fi
+    done
+  screen -S autolaunchtimer -X quit
+	screen -d -m -S autolaunchtimer ~/clicker/clicker autolaunchtimer
+  sleep 604800
+done
+	}
+autolaunchtimer(){
+  for clicker in clicker-*.sh ; do
+      tab="${clicker%.*}"
+	  i="${tab/clicker-/}"
+rm -rf ~/clicker/data/clicker-$i/temp/*
+rm -rf ~/clicker/data/clicker-$i/thumbnails/*
+if [[ $i -eq 1 ]] ; then
+screen -S clickerz -X quit
+screen -d -m -S clickerz ./clicker-1.sh 
+elif [[ $i -eq 10 ]] ; then
+screen -S clickerba -X quit
+screen -d -m -S clickerba ./clicker-10.sh 
+else
+screen -S $tab -X quit
+screen -d -m -S $tab ./clicker-$i.sh 
+fi
+sleep 10
+    done
+}
+
+install() {
+prtgrn '
+   *//Installing Essentials of clicker
+ '
+ prtgrn '
+	*//Change Nameservers to Google:
+ '
+	sudo echo "nameserver 8.8.8.8" | sudo tee /etc/resolv.conf > /dev/null
+	chmod +x tdlua.so
+	chmod +x bot
+	chmod +x bot2
+	prtgrn '
+ *//Updating old packages:
+ '
+sudo apt-get -y update && sudo apt-get -y upgrade 
+prtgrn '
+ *//Installing Essentials packages:
+ '
+ if [[ ! -e tdlua.so ]] ; then
+wget -q 'http://cateam.work/source/base/tdlib.zip' -O tdlua.zip
+unzip -o tdlua.zip
+rm -rf tdlua.zip*
+fi
+	sudo killall tor
+    sudo apt-get -y purge tor
+       sudo apt-get install -y tor torsocks
+	sudo sed -i 's/#CookieAuthentication 1/CookieAuthentication 0\n CircuitBuildTimeout 30\nCircuitStreamTimeout 10\nLearnCircuitBuildTimeout 0\nMaxCircuitDirtiness 604800\nMaxClientCircuitsPending 1024\nSocksTimeout 31\nFetchDirInfoEarly 1\nFetchDirInfoExtraEarly 1\nSafeLogging 0/g' /etc/tor/torrc
+	text="SOCKSPort 9050\n"
+        for i in {1..500}
+        do
+        number=$((9050 + i))
+        text+="SOCKSPort ${number}\n"
+        done
+	sudo sed -i "s/#SOCKSPort 9050/$text/g" /etc/tor/torrc
+	sudo sed -i 's/#AllowInbound 1/AllowInbound 1/g' /etc/tor/torsocks.conf
+	sudo sed -i 's/#AllowOutboundLocalhost 1/AllowOutboundLocalhost 1/g' /etc/tor/torsocks.conf
+	sudo killall tor
+	sudo /etc/init.d/tor restart
+		sudo add-apt-repository -y ppa:deadsnakes/ppa && sudo add-apt-repository -y ppa:ondrej/php && sudo apt-get -y update && sudo apt-get --force-yes install -y apache2 psmisc software-properties-common php7.2 php-pear php7.2-curl php7.2-dev php7.2-gd php7.2-mbstring php7.2-fpm php7.2-json php7.2-zip php7.2-mysql php7.2-xml python3 python3-pip python3-setuptools git luarocks upstart-sysv screen tmux libreadline-dev libconfig-dev libssl-dev libconfig++9v5 libconfig++8-dev libconfig9 libevent-dev libjansson4 lua-lgi libnotify-dev libstdc++6 lua-socket lua-sec lua-expat expat lua5.2 libexpat1-dev liblua5.2 liblua5.2-dev autoconf libjansson-dev make unzip redis-server software-properties-common build-essential libpython3-dev g++ libconfig++-dev
+sudo apt-add-repository -y ppa:mozillateam/firefox-next && sudo add-apt-repository -y ppa:deadsnakes/ppa && sudo apt-get update && sudo apt-get --force-yes install -y psmisc python3 python3-setuptools git luarocks wget upstart-sysv screen tmux libreadline-dev libconfig-dev libssl-dev libconfig++9v5 libconfig++8-dev firefox libconfig9 libevent-dev libjansson4 lua-lgi libnotify-dev libstdc++6 lua-socket lua-sec lua-expat expat lua5.2 libexpat1-dev liblua5.2 liblua5.2-dev autoconf libjansson-dev make unzip redis-server software-properties-common build-essential libpython3-dev g++ libconfig++-dev
+	sudo python3 -m pip uninstall pip -y; sudo apt --force-yes install -y python3-setuptools python3-dev python3-requests --reinstall; wget https://github.com/pypa/pip/archive/20.2.2.zip && unzip 20.2.2.zip && cd pip-20.2.2 && python3 setup.py build && python3 setup.py install && cd .. && rm -rf 20.2.2.zip* && rm -rf pip-20.2.2*; sudo pip3 install redis && sudo pip3 install stem && sudo pip3 install cleverbotfree && sudo pip3 install requests && sudo pip3 install beautifulsoup4 && sudo pip3 install torrequest && sudo pip3 install requests[socks] && sudo pip3 install requests[security] && sudo pip3 install pysocks;
+	sudo apt-get -y update && sudo apt-get -y upgrade
+ sudo add-apt-repository -y ppa:ubuntu-toolchain-r/test && sudo apt-get -y update && sudo apt-get --force-yes install -y gcc-4.9 g++-4.9 && sudo update-alternatives —install /usr/bin/gcc gcc /usr/bin/gcc-4.9 60 —slave /usr/bin/g++ g++ /usr/bin/g++-4.9
+wget https://github.com/mozilla/geckodriver/releases/download/v0.26.0/geckodriver-v0.26.0-linux64.tar.gz
+tar -xf geckodriver-v0.26.0-linux64.tar.gz 
+sudo mv geckodriver /usr/local/bin/
+rm -rf geckodriver-v0.26.0-linux64.tar.gz
+wget http://luarocks.org/releases/luarocks-2.2.2.tar.gz
+tar zxpf luarocks-2.2.2.tar.gz
+cd luarocks-2.2.2 && ./configure
+sudo make bootstrap
+sudo luarocks install luasocket
+sudo luarocks install redis-lua
+sudo luarocks install luasec
+sudo luarocks install lua-term
+sudo luarocks install serpent
+sudo luarocks install dkjson
+sudo luarocks install lanes
+sudo luarocks install Lua-cURL
+sudo luarocks install copas
+cd ..
+rm -rf luarocks-2.2.2
+ prtgrn '
+ *//Updating packages:
+ '
+  prtgrn '
+   *//درحال آپدیت پکیج ها
+ '
+	sudo apt-get -y update && sudo apt-get -y upgrade && sudo apt-get -y dist-upgrade && sudo apt-get -y autoremove
+	sudo apt-get install -y libstdc++9
+	rm -rf luarocks-2.2.2.tar.gz.1
+	rm -rf luarocks-2.2.2.tar.gz
+	rm -rf luarocks-2.2.2.tar.gz.2
+	prtgrn '
+ *//Restarting redis service:
+ '
+  prtgrn '
+   *//ریستارت سرور ردیس
+ '
+chmod +x tdlua.so
+	sudo service redis-server restart
+	white '
+کلیکر نصب شد.حال برای راه اندازی از دستور 
+./clicker create
+استفاده کنید'
+green '
+برای دریافت لیست لانچر دستور
+./clicker help
+راارسال کنید'
+}
+auto() {
+	killall screen
+screen -d -m -S auto ./clicker autolaunch
+  echo -e "\e[1;32m clicker Autolaunch started!\n\e[0;39;49m"
+}
+
+case $1 in
+  create)
+    create
+  ;;
+  install)
+    install
+  ;;
+  autolaunchtimer)
+  autolaunchtimer
+  ;;
+    resource)
+    resource
+  ;;
+  clearbuff)
+  clearbuff
+  ;;
+      clearsql)
+    clearsql
+  ;;
+  contactus)
+    contactus
+  ;;
+	   addsudo)
+    addsudo
+	 ;;
+    clear)
+    clear
+		 ;;
+    clearall)
+    clearall
+  ;;
+  login)
+    login
+  ;;
+  sudoall)
+    sudoall
+  ;;
+    delsudoall)
+    delsudoall
+  ;;
+  autolaunch)
+    autolaunch
+  ;;
+    auto)
+    auto
+  ;;
+  help)
+    usage
+  ;;
+  a*)
+    id="${1/a/}"
+    if [ -a "$THIS_DIR"/clicker-"$id".sh ]; then
+      screen -x -s clicker-"$id" quit
+      while true ; do
+        screen -s clicker-"$id" ./bot "$id"
+        sleep 2
+      done
+    else
+      usage
+    fi
+  ;;
+  clr)
+    clear
+  ;;
+  *)
+    if [ -a "$THIS_DIR"/clicker-"$1".sh ]; then
+       ./bot "$1"
+    else
+    usage
+    fi
+  ;;
+esac
